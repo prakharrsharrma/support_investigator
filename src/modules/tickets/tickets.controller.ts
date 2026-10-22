@@ -1,19 +1,29 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import { TAnalyseTicketRequest } from "./ticket.schema";
+import TicketsService from "./tickets.service";
 
 export default class TicketsController {
-  async analyzeTicket(req: FastifyRequest, rep: FastifyReply) {
-    return {
-      ticketId: "TKT-001",
-      analysis: {
-        issueType: "delivery_issue",
-        orderId: "ORD-123",
-        summary:
-          "Customer reports that order ORD-123 has not arrived after 10 days.",
-        customerIntent: "request_refund",
-        missingInformation: [],
-        suggestedReply:
-          "I'm sorry your order hasn't arrived. We'll need to verify the delivery status and refund eligibility before confirming a refund.",
-      },
-    };
+  constructor(private readonly ticketsService: TicketsService) {}
+
+  async analyzeTicket(
+    request: FastifyRequest<{ Body: TAnalyseTicketRequest }>,
+    reply: FastifyReply,
+  ) {
+    const { ticketId, message } = request.body;
+
+    try {
+      const analysis = await this.ticketsService.analyseTicket(message);
+
+      return reply.code(200).send({
+        ticketId,
+        analysis,
+      });
+    } catch (error) {
+      request.log.error({ err: error }, "Ticket analysis failed");
+
+      return reply.code(502).send({
+        error: "Ticket analysis service unavailable",
+      });
+    }
   }
 }
