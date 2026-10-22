@@ -1,6 +1,8 @@
 import { FastifyInstance } from "fastify";
-import { healtRoutes } from "../modules/health/health.routes";
+import { healthRoutes } from "../modules/health/health.routes";
+import { ticketsRoutes } from "../modules/tickets/tickets.routes";
 
 export async function v1Routes(app: FastifyInstance) {
-  app.register(healtRoutes, { prefix: "/health" });
+  app.register(healthRoutes, { prefix: "/health" });
+  app.register(ticketsRoutes, { prefix: "/tickets" });
 }
