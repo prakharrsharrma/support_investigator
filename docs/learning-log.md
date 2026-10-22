@@ -66,3 +66,47 @@ Neither guarantees factual correctness. Additional testing and safeguards are ne
 ### Next Step
 
 Integrate the Gemini analysis into the existing Fastify `POST /tickets/analyze` endpoint, replacing the hardcoded response.
+
+## 02 — Integrating an LLM with Fastify
+
+### Objective
+
+Integrate Gemini into the existing Fastify API to analyze customer support tickets dynamically.
+
+### What I implemented
+
+- Created `ticket.service.ts` to handle LLM interactions.
+- Connected the ticket controller to the analysis service.
+- Replaced hardcoded responses with Gemini-generated analysis.
+- Validated LLM output using Zod before returning it.
+- Added basic error handling for failed LLM requests.
+
+### Key Learnings
+
+**1. Separation of concerns**
+
+- Controller handles HTTP requests and responses.
+- Service handles prompts, model interaction, and response validation.
+- Gemini client manages SDK initialization.
+
+**2. LLMs are external dependencies**
+
+- Model requests can fail independently of the application.
+- Backend errors should be logged without exposing sensitive provider details.
+
+**3. Trust boundaries**
+
+- LLM-generated responses should be treated as untrusted data.
+- Schema validation ensures structural correctness, not factual accuracy.
+
+**4. End-to-end GenAI workflow**
+
+`HTTP Request → Fastify Validation → Ticket Service → Gemini → Zod Validation → HTTP Response`
+
+### Outcome
+
+Successfully built a working Fastify endpoint that accepts customer tickets and returns AI-generated, structured analysis.
+
+### Next Learning Goal
+
+Explore tool calling, allowing the LLM to request information from backend functions such as order and shipment lookups.
