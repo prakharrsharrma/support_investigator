@@ -13,9 +13,9 @@
   "type": "commonjs",
   "dependencies": {
     "@fastify/type-provider-zod": "^1.0.1",
+    "@google/genai": "^2.30.0",
     "dotenv": "^18.0.8",
     "fastify": "^5.12.7",
-    "openai": "^7.42.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
