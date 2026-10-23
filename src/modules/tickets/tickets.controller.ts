@@ -26,4 +26,27 @@ export default class TicketsController {
       });
     }
   }
+
+  async investigate(
+    request: FastifyRequest<{ Body: TAnalyseTicketRequest }>,
+    reply: FastifyReply,
+  ) {
+    const { ticketId, message } = request.body;
+
+    try {
+      const investigation =
+        await this.ticketsService.investigateTicket(message);
+
+      return reply.code(200).send({
+        ticketId,
+        investigation,
+      });
+    } catch (error) {
+      request.log.error({ err: error }, "Ticket investigation failed");
+
+      return reply.code(502).send({
+        error: "Ticket investigation service unavailable",
+      });
+    }
+  }
 }
