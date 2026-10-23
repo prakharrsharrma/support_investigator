@@ -110,3 +110,84 @@ Successfully built a working Fastify endpoint that accepts customer tickets and 
 ### Next Learning Goal
 
 Explore tool calling, allowing the LLM to request information from backend functions such as order and shipment lookups.
+
+## 03 — Tool Calling and AI-Driven Ticket Investigation
+
+### Objective
+
+Understand how an LLM interacts with backend functions to retrieve real application data and produce evidence-based responses.
+
+### What I implemented
+
+- Created synthetic order data and a `getOrder()` lookup function.
+- Defined Gemini function declarations describing available tools.
+- Built a tool registry mapping declarations, Zod schemas, and implementations.
+- Implemented a tool executor to validate arguments and dispatch function calls.
+- Completed the function-calling cycle by returning tool results to Gemini.
+- Integrated the workflow into Fastify through `POST /tickets/investigate`.
+
+### Key Learnings
+
+**1. Tool Calling vs Tool Execution**
+
+- Gemini decides which tool to request and generates its arguments.
+- The backend validates and executes the actual TypeScript function.
+- An LLM cannot directly access our backend functions simply because we declare them.
+
+**2. Tool Registry Pattern**
+
+- Centralizes available tools, their schemas, and implementations.
+- Avoids growing `switch` statements.
+- Makes adding future tools like `getShipment()` and `searchPolicy()` easier.
+- Provides an explicit allowlist of functions the LLM can request.
+
+**3. Function Calling Lifecycle**
+
+`User → Gemini → Function Call → Tool Executor → Backend Function → Tool Result → Gemini → Final Response`
+
+- Gemini's initial response may contain a `functionCall` instead of text.
+- Tool results are returned using `functionResponse`.
+- Conversation history must be preserved across model requests.
+- This is a single-round tool-calling workflow, not yet an autonomous agent loop.
+
+**4. Separation of Concerns**
+
+- Controller handles HTTP communication.
+- Ticket service coordinates LLM interaction and tool execution.
+- Tool executor validates arguments and dispatches functions.
+- Individual tools contain business logic.
+
+Separation of concerns is about responsibilities, not necessarily separate files.
+
+**5. Tool Results Don't Guarantee Correct Reasoning**
+
+During testing, Gemini correctly retrieved an order marked as `delivered` but incorrectly implied that an automatic refund could not be processed.
+
+This revealed an important limitation:
+
+- Retrieved data provides evidence, not necessarily a complete business decision.
+- Order status alone cannot determine refund eligibility.
+- Prompt improvements can reduce unsupported conclusions but cannot guarantee their elimination.
+- Business decisions require additional evidence, explicit policies, and backend safeguards.
+
+### Outcome
+
+Successfully implemented an end-to-end, tool-enabled Fastify API that:
+
+1. Accepts a customer support ticket.
+2. Lets Gemini request an order lookup.
+3. Validates and executes the requested backend function.
+4. Returns the result to Gemini.
+5. Generates an investigation response using retrieved order data.
+
+### Current Limitations
+
+- Only `getOrder()` is available.
+- Investigation supports one round of tool execution.
+- Refund eligibility cannot yet be determined.
+- Customer-level authorization is not implemented.
+- Responses are not yet constrained by a dedicated investigation output schema.
+
+### Next Learning Goal
+
+Introduce shipment and refund-policy lookups, enabling Gemini to investigate tickets using multiple sources of evidence before recommending a resolution.
