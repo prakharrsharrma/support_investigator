@@ -1,4 +1,8 @@
 import z from "zod";
+import {
+  InvestigationResultReason,
+  InvestigationResultStatus,
+} from "./tickets.types";
 
 export const ticketAnalysisSchema = z.object({
   issueType: z.enum([
@@ -46,6 +50,8 @@ const investigateTicketRequestSchema = z.object({
 const investigateTicketResponseSchema = z.object({
   ticketId: z.string().min(1),
   investigation: z.string().min(1),
+  status: z.enum(InvestigationResultStatus),
+  reason: z.enum(InvestigationResultReason),
 });
 
 export const ticketInvestigationValidationSchema = {

@@ -5,10 +5,7 @@ export async function executeTool(name: string, args: unknown) {
     throw new Error(`Unknown tool: ${name}`);
   }
 
-  const toolName = name as keyof typeof toolRegistry;
-  const tool = toolRegistry[toolName];
+  const tool = toolRegistry[name as keyof typeof toolRegistry];
 
-  const validatedArgs = tool.schema.parse(args);
-
-  return await tool.execute(validatedArgs);
+  return await tool.run(args);
 }

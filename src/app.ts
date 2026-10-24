@@ -9,7 +9,9 @@ import { errorHandler } from "./middlewares/error.middileware";
 import { v1Routes } from "./routes/v1.routes";
 import { PORT } from "./utils/constants";
 
-const app = fastify({ logger: true });
+const app = fastify({
+  logger: true,
+});
 
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);

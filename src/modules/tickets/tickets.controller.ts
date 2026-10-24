@@ -34,12 +34,12 @@ export default class TicketsController {
     const { ticketId, message } = request.body;
 
     try {
-      const investigation =
+      const investigationResult =
         await this.ticketsService.investigateTicket(message);
 
       return reply.code(200).send({
         ticketId,
-        investigation,
+        ...investigationResult,
       });
     } catch (error) {
       request.log.error({ err: error }, "Ticket investigation failed");
