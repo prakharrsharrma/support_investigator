@@ -191,3 +191,106 @@ Successfully implemented an end-to-end, tool-enabled Fastify API that:
 ### Next Learning Goal
 
 Introduce shipment and refund-policy lookups, enabling Gemini to investigate tickets using multiple sources of evidence before recommending a resolution.
+
+## 04 — Building a Bounded Agentic Investigation Loop
+
+### Objective
+
+Move beyond single-round tool calling and build an agent capable of investigating support tickets across multiple steps, while keeping execution under backend control.
+
+### What I Implemented
+
+- Added `getShipment()` alongside the existing `getOrder()` tool.
+- Extended the tool registry to support multiple tools with different argument schemas.
+- Introduced a typed registration helper to preserve TypeScript safety.
+- Refactored the investigation service into a multi-step agent loop.
+- Implemented tool-round limits and natural termination.
+- Added a separate final response generation phase.
+- Introduced investigation status and termination reasons.
+- Added an investigation deadline using `AbortSignal.timeout()`.
+
+### Key Learnings
+
+**1. Tool Calling vs Agentic Behavior**
+
+Tool calling allows an LLM to request a backend function.
+
+Agentic behavior emerges when the model repeatedly evaluates retrieved evidence and decides what action to take next.
+
+Our agent demonstrated this by:
+
+- Calling `getOrder("ORD-123")`.
+- Discovering shipment ID `SHP-123`.
+- Calling `getShipment("SHP-123")`.
+- Combining both results into an investigation summary.
+
+The backend controls the execution loop; the LLM selects the next tool.
+
+**2. Understanding the Agent Loop**
+
+The investigation follows this pattern:
+
+`LLM → Tool Request → Backend Execution → Tool Result → LLM → Repeat or Finish`
+
+Conversation history is preserved across iterations so the model can use previously retrieved evidence.
+
+**3. Why Agents Need Stopping Conditions**
+
+An LLM may continue requesting tools even when further investigation is unnecessary or impossible.
+
+We introduced three safeguards:
+
+- **Natural termination:** Stop when the model returns a final response without requesting tools.
+- **Step limit:** Restrict the maximum number of tool-execution rounds.
+- **Timeout:** Set an overall investigation deadline.
+
+The initial limits are configuration choices, not experimentally optimized values.
+
+**4. Step Limits and Final Response Generation**
+
+Initially, the loop could execute a tool in its final iteration without allowing Gemini to interpret the result.
+
+We improved this by separating the maximum tool-execution rounds from the final response generation.
+
+This ensures that reaching the step limit does not automatically discard the evidence collected.
+
+**5. An Unexpected Function-Calling Problem**
+
+During testing, Gemini continued generating `getShipment()` function calls even when function calling was disabled in the final request.
+
+We resolved the issue in our test by separating investigation from final report generation:
+
+- Investigation retains the conversation history and tool access.
+- Final reporting starts a fresh model request using only the original ticket and collected tool evidence.
+- The reporting phase does not expose tools.
+
+This taught me that model configuration alone should not be relied upon to enforce execution boundaries.
+
+**6. Explicit Investigation Status**
+
+An investigation that reaches its execution limit should not be presented as fully completed.
+
+We introduced:
+
+- `completed` — The model naturally finished.
+- `incomplete` — Execution stopped because of a configured limit or timeout.
+
+Termination reasons help explain why execution ended.
+
+Importantly, a naturally completed agent loop does not guarantee that the underlying customer issue has been resolved.
+
+**7. Timeouts and Cancellation**
+
+Step limits control the number of iterations, but not execution duration.
+
+Using `AbortSignal.timeout()` provides a shared deadline across the investigation.
+
+Important distinctions:
+
+- A deadline can prevent additional work from starting.
+- Cancellation must be supported by the operation being executed.
+- Aborting an API request does not necessarily stop processing on the provider's servers.
+
+**8. Evidence-Based Reasoning Still Needs Validation**
+
+During testing, Gemini interpreted an amount
