@@ -10,7 +10,16 @@ import { v1Routes } from "./routes/v1.routes";
 import { PORT } from "./utils/constants";
 
 const app = fastify({
-  logger: true,
+  logger: {
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        translateTime: "SYS:standard",
+        ignore: "pid,hostname",
+      },
+    },
+  },
 });
 
 app.setValidatorCompiler(validatorCompiler);
