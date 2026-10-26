@@ -3,6 +3,9 @@ import { z } from "zod";
 import { getOrderDeclaration } from "./order/order.declaration";
 import { getOrderSchema } from "./order/order.schemas";
 import { getOrder } from "./order/order.tool";
+import { searchPolicyDeclaration } from "./policy/policy.declaration";
+import { searchPolicyArgsSchema } from "./policy/policy.schema";
+import { searchPolicy } from "./policy/policy.tool";
 import { getShipmentDeclaration } from "./shipment/shipment.declaration";
 import { getShipmentArgsSchema } from "./shipment/shipment.schemas";
 import { getShipment } from "./shipment/shipment.tool";
@@ -30,5 +33,11 @@ export const toolRegistry = {
     getShipmentDeclaration,
     getShipmentArgsSchema,
     (args) => getShipment(args.shipmentId),
+  ),
+
+  searchPolicy: defineTool(
+    searchPolicyDeclaration,
+    searchPolicyArgsSchema,
+    (args) => searchPolicy(args.category),
   ),
 };

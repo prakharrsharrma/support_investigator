@@ -1,4 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import { EvidenceValidationError } from "../../errors/ai/error.validations";
 import { TAnalyseTicketRequest } from "./ticket.schema";
 import TicketsService from "./tickets.service";
 
@@ -42,6 +43,17 @@ export default class TicketsController {
         ...investigationResult,
       });
     } catch (error) {
+      if (error instanceof EvidenceValidationError) {
+        request.log.warn(
+          { err: error },
+          "Investigation evidence validation failed",
+        );
+
+        return reply.code(500).send({
+          error: "Investigation results could not be verified",
+        });
+      }
+
       request.log.error({ err: error }, "Ticket investigation failed");
 
       return reply.code(502).send({
