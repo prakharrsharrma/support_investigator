@@ -294,3 +294,166 @@ Important distinctions:
 **8. Evidence-Based Reasoning Still Needs Validation**
 
 During testing, Gemini interpreted an amount
+
+## 05 — Structured Investigation Findings and Evidence Validation
+
+### Objective
+
+Improve the reliability of agent-generated investigations by introducing structured findings, evidence references, and backend validation.
+
+### What I Implemented
+
+- Added synthetic refund, delivery, and damage policies.
+- Introduced `searchPolicy()` using category-based retrieval.
+- Registered the new tool with Gemini.
+- Defined a Zod schema for structured investigation findings.
+- Separated agent investigation from final report generation.
+- Implemented evidence-reference validation.
+- Added unit tests and error handling for unsupported references.
+
+### Key Learnings
+
+**1. Retrieval-Augmented Generation (RAG)**
+
+Our policy lookup introduced a simple form of retrieval-augmented generation.
+
+The agent retrieves external policy information and uses it to support its conclusions.
+
+RAG does not necessarily require embeddings or vector databases. Deterministic lookups, keyword searches, and databases can also provide retrieval.
+
+**2. Structured Outputs vs Evidence Validation**
+
+Structured outputs ensure that Gemini returns data matching our expected schema.
+
+However, schema-valid JSON can still contain invented references.
+
+We introduced deterministic validation to ensure every generated `{ source, referenceId }` pair corresponds to a record retrieved during the current investigation.
+
+**3. Evidence References Don't Guarantee Factual Accuracy**
+
+A reference can exist while the statement citing it remains incorrect.
+
+There are two different problems:
+
+- Reference validation: Was the cited record actually retrieved?
+- Claim verification: Does the retrieved record support the generated statement?
+
+We implemented reference validation. Claim verification remains future work.
+
+**4. Fail-Closed Behavior**
+
+Rather than silently removing unsupported findings, the backend rejects the investigation report when evidence validation fails.
+
+During testing, we deliberately injected `POL-999`, an unsupported policy reference.
+
+The validator rejected it, and the API returned a controlled error without exposing the invalid findings.
+
+**5. Execution Status vs Business Resolution**
+
+An investigation can finish successfully while refund eligibility remains undetermined.
+
+For example:
+
+- `status: completed`
+- `reason: model_finished`
+- `refundEligibility: undetermined`
+
+Agent execution completion does not imply that the customer's issue has been resolved.
+
+### Outcome
+
+Implemented structured, schema-validated investigation reports with evidence references checked against actual tool execution results.
+
+Added deterministic unit tests and verified that invalid evidence is rejected at the API boundary.
+
+### Remaining Limitations
+
+- Evidence validation checks reference existence, not claim correctness.
+- Policy retrieval uses static category-based filtering.
+- Unsupported evidence currently causes the report to fail without automatic recovery.
+- Refund eligibility remains dependent on sufficient verified policy and order data.
+
+---
+
+## 06 — Agent Observability and Performance Tracing
+
+### Objective
+
+Understand how to observe agent execution, measure performance, and identify bottlenecks in a multi-step AI workflow.
+
+### What I Implemented
+
+- Created an `InvestigationTrace` interface.
+- Recorded total investigation duration.
+- Tracked the number and duration of Gemini requests.
+- Recorded tool execution names and durations.
+- Captured traces using a `finally` block, including failed investigations.
+- Instrumented both investigation and structured-report generation.
+
+### Key Learnings
+
+**1. Logging, Tracing, and Evaluation Are Different**
+
+- Logging explains what happened.
+- Tracing captures execution steps and their durations.
+- Evaluation measures whether the agent behaved correctly and produced accurate results.
+
+We have implemented basic execution tracing. Formal evaluation is still pending.
+
+**2. Instrumentation Must Cover Every Execution Path**
+
+Our initial trace recorded three Gemini calls but missed the final reporting request.
+
+The issue occurred because `generateFindings()` was called from two different termination paths, but only one was instrumented.
+
+We fixed this by moving timing instrumentation into `generateFindings()` itself.
+
+This reinforced an engineering principle: instrument operations close to where they execute.
+
+**3. LLM Calls Are Our Primary Latency Bottleneck**
+
+Our corrected trace recorded:
+
+| Metric                       | Observed Value |
+| ---------------------------- | -------------: |
+| Total investigation duration |     112,097 ms |
+| Gemini requests              |              4 |
+| Combined Gemini latency      |     112,091 ms |
+| Backend tool executions      |              3 |
+| Combined tool execution time |           4 ms |
+
+The observed latency came almost entirely from Gemini requests rather than our synthetic backend tools.
+
+**4. Agentic Workflows Amplify Latency**
+
+A multi-step investigation may require several sequential model requests.
+
+Even if each request succeeds, their accumulated latency can make the API slow.
+
+This introduces trade-offs between investigation depth, latency, token usage, and cost.
+
+**5. Performance Data Needs Repeated Measurements**
+
+Individual investigation runs showed substantial latency variation.
+
+A single trace is useful for debugging but insufficient for making reliable performance claims.
+
+Future measurements should include multiple runs, token usage, and latency percentiles.
+
+### Outcome
+
+Implemented basic application-level observability for the agent investigation workflow.
+
+We can now identify executed tools, count model requests, measure their durations, and locate performance bottlenecks.
+
+### Remaining Limitations
+
+- Token usage and API costs are not yet tracked.
+- Traces are logged locally rather than persisted.
+- We haven't established p50/p95 latency benchmarks.
+- No formal evaluation suite exists yet.
+- Our current synchronous API can experience high response latency.
+
+### Next Learning Goal
+
+Introduce model token-usage tracking, followed by a small evaluation suite to measure investigation correctness, tool selection, evidence grounding, and failure handling.
